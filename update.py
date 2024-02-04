@@ -83,10 +83,13 @@ def check_genom(input_array, genom, show_output=False):
         # На выходе второго скрытого слоя
         l2 = sigmoid(np.dot(l1, layer2))
         # Насколько мы ошиблись?
-        error = np.sum(np.square(output_array[num] - l2))
+        # output_array[num] * 10 + 1 * np.square(output_array[num] - l2)
+        error = np.sum((11 - (output_array[num] * 10)) * (np.square(output_array[num] - l2)))
+        # error = np.sum(np.square(output_array[num] - l2))
         total_error += error
         # total_error += np.sum(np.square(output_array[num] - l2))
         # total_error += np.sum(np.multiply(output_array[num], l2))
+        
         # import ipdb; ipdb.set_trace()
         if show_output:
             print(l2)

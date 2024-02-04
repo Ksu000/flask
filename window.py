@@ -25,6 +25,12 @@ canvas = pygame.Surface((WIDTH, HEIGHT))
 canvas.fill(WHITE)
 
 
+def normalize_2d(matrix):
+    norm = np.linalg.norm(matrix)
+    matrix = matrix / norm
+    return matrix
+
+
 def sigmoid(x, der=False):
     """
     Сигмоида для опредления значения весов
@@ -41,7 +47,7 @@ def smooth(I):
     return J
 
 
-def save(canvas):
+def calc(canvas):
     # Разбиение рисунка на массив 28x28 по 8x8 точек
     img_array = pygame.surfarray.array2d(canvas).T
     img_array_resized = np.zeros((28, 28))
@@ -52,33 +58,42 @@ def save(canvas):
             arr = 255 - int(arr / 4294967040 * 255)
             if arr != 0:
                 img_array_resized[i, j] = arr
-    np.savetxt("data/img_array_resized.csv", img_array_resized.astype(int), delimiter=",", fmt='%s')
+
+    # np.savetxt(
+    #     "data/img_array_resized.csv",
+    #     img_array_resized.astype(int),
+    #     delimiter=",",
+    #     fmt="%s",
+    # )
     user_signal = np.reshape(img_array_resized, (1, img_array_resized.size))
     ia = np.array(user_signal)
 
-    filename = os.path.join('data', 'genom.json')
+    filename = os.path.join("data", "genom.json")
     with open(filename, encoding="utf-8") as f:
         genom_dct = json.load(f)
     for key in genom_dct:
         genom = genom_dct[key]
-        break    
-            
+        break
+
     PIXELS_PER_IMAGE = 784
     HIDDEN_SIZE = 40
     NUM_LABELS = 10
-    
+
     layer1_out = PIXELS_PER_IMAGE * HIDDEN_SIZE
     second = HIDDEN_SIZE * NUM_LABELS
     layer2_out = layer1_out + second
     layer1 = np.reshape(genom[:layer1_out], (PIXELS_PER_IMAGE, HIDDEN_SIZE))
     layer2 = np.reshape(genom[layer1_out:layer2_out], (HIDDEN_SIZE, NUM_LABELS))
-        
+
     # На выходе первого скрытого слоя
     l1 = sigmoid(np.dot(ia, layer1))
     # На выходе второго скрытого слоя
     l2 = sigmoid(np.dot(l1, layer2))
-    for num, val in enumerate(l2[0]):
-        print(num, val)
+    l3 = normalize_2d(l2)
+
+    for num, val in enumerate(l3[0]):
+        print(num, val, "*" * int(50 * val))
+    print()
 
 
 # Основной цикл программы
@@ -90,7 +105,6 @@ while True:
     # Обработка событий
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            save(canvas)
             pygame.quit()
             sys.exit()
         elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -100,6 +114,7 @@ while True:
                 canvas.fill(WHITE)
         elif event.type == pygame.MOUSEBUTTONUP:
             drawing = False
+            calc(canvas)
 
     # Рисование на холсте
     if drawing:
