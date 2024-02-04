@@ -82,13 +82,17 @@ def calc(canvas):
     layer1_out = PIXELS_PER_IMAGE * HIDDEN_SIZE
     second = HIDDEN_SIZE * NUM_LABELS
     layer2_out = layer1_out + second
+    bias1_out = layer2_out + HIDDEN_SIZE
+    
     layer1 = np.reshape(genom[:layer1_out], (PIXELS_PER_IMAGE, HIDDEN_SIZE))
     layer2 = np.reshape(genom[layer1_out:layer2_out], (HIDDEN_SIZE, NUM_LABELS))
-
+    bias1 = np.reshape(genom[layer2_out:bias1_out], (HIDDEN_SIZE,))
+    bias2 = np.reshape(genom[bias1_out:], (NUM_LABELS,))
+    
     # На выходе первого скрытого слоя
-    l1 = sigmoid(np.dot(ia, layer1))
+    l1 = sigmoid(np.dot(ia, layer1) + bias1)
     # На выходе второго скрытого слоя
-    l2 = sigmoid(np.dot(l1, layer2))
+    l2 = sigmoid(np.dot(l1, layer2) + bias2)
     l3 = normalize_2d(l2)
 
     for num, val in enumerate(l3[0]):

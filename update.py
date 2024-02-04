@@ -71,26 +71,27 @@ def check_genom(input_array, genom, show_output=False):
     layer1_out = PIXELS_PER_IMAGE * HIDDEN_SIZE
     second = HIDDEN_SIZE * NUM_LABELS
     layer2_out = layer1_out + second
+    bias1_out = layer2_out + HIDDEN_SIZE
 
     layer1 = np.reshape(genom[:layer1_out], (PIXELS_PER_IMAGE, HIDDEN_SIZE))
     layer2 = np.reshape(genom[layer1_out:layer2_out], (HIDDEN_SIZE, NUM_LABELS))
+    bias1 = np.reshape(genom[layer2_out:bias1_out], (HIDDEN_SIZE,))
+    bias2 = np.reshape(genom[bias1_out:], (NUM_LABELS,))
 
     total_error = 0
     # Перебираем все наборы данных, которые подают на вход
     for num, ia in enumerate(input_array):
         # На выходе первого скрытого слоя
-        l1 = sigmoid(np.dot(ia, layer1))
+        l1 = sigmoid(np.dot(ia, layer1) + bias1)
         # На выходе второго скрытого слоя
-        l2 = sigmoid(np.dot(l1, layer2))
+        l2 = sigmoid(np.dot(l1, layer2) + bias2)
         # Насколько мы ошиблись?
-        # output_array[num] * 10 + 1 * np.square(output_array[num] - l2)
-        error = np.sum((11 - (output_array[num] * 10)) * (np.square(output_array[num] - l2)))
-        # error = np.sum(np.square(output_array[num] - l2))
+        error = np.sum(
+            (11 - (output_array[num] * 10)) * (np.square(output_array[num] - l2))
+        )
+
         total_error += error
-        # total_error += np.sum(np.square(output_array[num] - l2))
-        # total_error += np.sum(np.multiply(output_array[num], l2))
-        
-        # import ipdb; ipdb.set_trace()
+
         if show_output:
             print(l2)
             print(output_array[num])
@@ -116,19 +117,19 @@ if __name__ == "__main__":
     input_array, output_array = get_data("data/mnist_test.csv")
     # ('/content/sample_data/mnist_test.csv')
     # input_array, output_array = get_data('data/mnist_train.csv')
-    
+
     # Инициализация весовых коэффицентов
     dad = list()
     for _ in range((PIXELS_PER_IMAGE * HIDDEN_SIZE) + (HIDDEN_SIZE * NUM_LABELS)):
         dad.append(random.random() - 0.5)
-    dad.append(0)
-    dad.append(0)
+    dad.extend([0 for _ in range(HIDDEN_SIZE)])
+    dad.extend([0 for _ in range(NUM_LABELS)])
 
     mom = list()
     for _ in range((PIXELS_PER_IMAGE * HIDDEN_SIZE) + (HIDDEN_SIZE * NUM_LABELS)):
         mom.append(random.random() - 0.5)
-    mom.append(0)
-    mom.append(0)
+    mom.extend([0 for _ in range(HIDDEN_SIZE)])
+    mom.extend([0 for _ in range(NUM_LABELS)])
 
     while True:
         genom_dct = dict()
@@ -146,12 +147,10 @@ if __name__ == "__main__":
         error_daughter = check_genom(input_array, daughter)
         genom_dct.setdefault(error_daughter, daughter)
 
-        save_json('data', 'genom.json', genom_dct)
+        save_json("data", "genom.json", genom_dct)
         print(genom_dct.keys())
 
         dad_key, mom_key, *_ = sorted(genom_dct)
 
         dad = genom_dct[dad_key]
         mom = genom_dct[mom_key]
-
-        # import ipdb; ipdb.sset_trace()
