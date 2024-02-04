@@ -67,26 +67,32 @@ def recombination(dad, mom, combination=0.8, mutations=0.2, diff=2):
     return child1, child2
 
 
-def check_genom(input_array, genom):
+def check_genom(input_array, genom, show_output=False):
     layer1_out = PIXELS_PER_IMAGE * HIDDEN_SIZE
     second = HIDDEN_SIZE * NUM_LABELS
     layer2_out = layer1_out + second
 
     layer1 = np.reshape(genom[:layer1_out], (PIXELS_PER_IMAGE, HIDDEN_SIZE))
     layer2 = np.reshape(genom[layer1_out:layer2_out], (HIDDEN_SIZE, NUM_LABELS))
-    bias1 = genom[-1]
-    bias2 = genom[-2]
 
     total_error = 0
     # Перебираем все наборы данных, которые подают на вход
     for num, ia in enumerate(input_array):
         # На выходе первого скрытого слоя
-        l1 = sigmoid(np.dot(ia, layer1) + bias1)
+        l1 = sigmoid(np.dot(ia, layer1))
         # На выходе второго скрытого слоя
-        l2 = sigmoid(np.dot(l1, layer2) + bias2)
+        l2 = sigmoid(np.dot(l1, layer2))
         # Насколько мы ошиблись?
-        error = np.sum(output_array[num] - l2)
-        total_error += abs(error)
+        error = np.sum(np.square(output_array[num] - l2))
+        total_error += error
+        # total_error += np.sum(np.square(output_array[num] - l2))
+        # total_error += np.sum(np.multiply(output_array[num], l2))
+        # import ipdb; ipdb.set_trace()
+        if show_output:
+            print(l2)
+            print(output_array[num])
+            print(error)
+            show_output = False
     return total_error
 
 
@@ -104,9 +110,9 @@ def get_data(filename):
 
 if __name__ == "__main__":
 
-    # input_array, output_array = get_data("data/mnist_test.csv")
+    input_array, output_array = get_data("data/mnist_test.csv")
     # ('/content/sample_data/mnist_test.csv')
-    input_array, output_array = get_data('data/mnist_train.csv')
+    # input_array, output_array = get_data('data/mnist_train.csv')
     
     # Инициализация весовых коэффицентов
     dad = list()
@@ -125,7 +131,7 @@ if __name__ == "__main__":
         genom_dct = dict()
         son, daughter = recombination(dad, mom)
 
-        error_dad = check_genom(input_array, dad)
+        error_dad = check_genom(input_array, dad, show_output=(random.random() < 0.1))
         genom_dct.setdefault(error_dad, dad)
 
         error_mom = check_genom(input_array, mom)
