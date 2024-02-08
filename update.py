@@ -67,7 +67,17 @@ def recombination(dad, mom, combination=0.8, mutations=0.2, diff=2):
     return child1, child2
 
 
-def check_genom(input_array, genom, show_output=False):
+def check_one_gen(ia, oa, layer1, layer2, bias1, bias2):
+    # На выходе первого скрытого слоя
+    l1 = sigmoid(np.dot(ia, layer1) + bias1)
+    # На выходе второго скрытого слоя
+    l2 = sigmoid(np.dot(l1, layer2) + bias2)
+    # Насколько мы ошиблись?
+    error = np.sum((11 - (oa * 10)) * (np.square(oa - l2)))
+    return error
+
+
+def get_perceptron(input_array, output_array, genom):
     layer1_out = PIXELS_PER_IMAGE * HIDDEN_SIZE
     second = HIDDEN_SIZE * NUM_LABELS
     layer2_out = layer1_out + second
@@ -78,25 +88,16 @@ def check_genom(input_array, genom, show_output=False):
     bias1 = np.reshape(genom[layer2_out:bias1_out], (HIDDEN_SIZE,))
     bias2 = np.reshape(genom[bias1_out:], (NUM_LABELS,))
 
+    return {"layer1": layer1, "layer2": layer2, "bias1": bias1, "bias2": bias2}
+
+
+def check_genom(input_array, output_array, genom):
+    perceptron_dct = get_perceptron(input_array, output_array, genom)
     total_error = 0
     # Перебираем все наборы данных, которые подают на вход
     for num, ia in enumerate(input_array):
-        # На выходе первого скрытого слоя
-        l1 = sigmoid(np.dot(ia, layer1) + bias1)
-        # На выходе второго скрытого слоя
-        l2 = sigmoid(np.dot(l1, layer2) + bias2)
-        # Насколько мы ошиблись?
-        error = np.sum(
-            (11 - (output_array[num] * 10)) * (np.square(output_array[num] - l2))
-        )
-
-        total_error += error
-
-        if show_output:
-            print(l2)
-            print(output_array[num])
-            print(error)
-            show_output = False
+        oa = output_array[num]
+        total_error += check_one_gen(ia, oa, **perceptron_dct)
     return total_error
 
 
@@ -114,43 +115,64 @@ def get_data(filename):
 
 if __name__ == "__main__":
 
-    input_array, output_array = get_data("data/mnist_test.csv")
+    # input_array, output_array = get_data("/content/sample_data/mnist_train_small.csv")
     # ('/content/sample_data/mnist_test.csv')
-    # input_array, output_array = get_data('data/mnist_train.csv')
+    input_array, output_array = get_data('data/mnist_train.csv')
 
-    # Инициализация весовых коэффицентов
-    dad = list()
-    for _ in range((PIXELS_PER_IMAGE * HIDDEN_SIZE) + (HIDDEN_SIZE * NUM_LABELS)):
-        dad.append(random.random() - 0.5)
-    dad.extend([0 for _ in range(HIDDEN_SIZE)])
-    dad.extend([0 for _ in range(NUM_LABELS)])
+    shear = sorted(
+        [random.randint(0, len(output_array)), random.randint(0, len(output_array))]
+    )
+    input_array = input_array[shear[0] : shear[1]]
+    output_array = output_array[shear[0] : shear[1]]
 
-    mom = list()
-    for _ in range((PIXELS_PER_IMAGE * HIDDEN_SIZE) + (HIDDEN_SIZE * NUM_LABELS)):
-        mom.append(random.random() - 0.5)
-    mom.extend([0 for _ in range(HIDDEN_SIZE)])
-    mom.extend([0 for _ in range(NUM_LABELS)])
+    # genom_dct = load_json("/content/drive/MyDrive/Colab Notebooks", "genom.json")
+    genom_dct = load_json("data", "genom.json")
+    if genom_dct:
+        dad_key, mom_key, *_ = sorted(genom_dct)
+        dad = genom_dct[dad_key]
+        mom = genom_dct[mom_key]
+    else:
+        # Инициализация весовых коэффицентов
+        dad = list()
+        for _ in range((PIXELS_PER_IMAGE * HIDDEN_SIZE) + (HIDDEN_SIZE * NUM_LABELS)):
+            dad.append(random.random() - 0.5)
+        dad.extend([0 for _ in range(HIDDEN_SIZE)])
+        dad.extend([0 for _ in range(NUM_LABELS)])
+
+        mom = list()
+        for _ in range((PIXELS_PER_IMAGE * HIDDEN_SIZE) + (HIDDEN_SIZE * NUM_LABELS)):
+            mom.append(random.random() - 0.5)
+        mom.extend([0 for _ in range(HIDDEN_SIZE)])
+        mom.extend([0 for _ in range(NUM_LABELS)])
 
     while True:
         genom_dct = dict()
         son, daughter = recombination(dad, mom)
 
-        error_dad = check_genom(input_array, dad, show_output=(random.random() < 0.1))
+        error_dad = check_genom(input_array, output_array, dad)
         genom_dct.setdefault(error_dad, dad)
 
-        error_mom = check_genom(input_array, mom)
+        error_mom = check_genom(input_array, output_array, mom)
         genom_dct.setdefault(error_mom, mom)
 
-        error_son = check_genom(input_array, son)
+        error_son = check_genom(input_array, output_array, son)
         genom_dct.setdefault(error_son, son)
 
-        error_daughter = check_genom(input_array, daughter)
+        error_daughter = check_genom(input_array, output_array, daughter)
         genom_dct.setdefault(error_daughter, daughter)
 
         save_json("data", "genom.json", genom_dct)
+        # save_json("/content/drive/MyDrive/Colab Notebooks", "genom.json", genom_dct)
         print(genom_dct.keys())
 
         dad_key, mom_key, *_ = sorted(genom_dct)
 
         dad = genom_dct[dad_key]
         mom = genom_dct[mom_key]
+
+        perceptron_dct = get_perceptron(input_array, output_array, dad)
+        ia = input_array[0]
+        oa = output_array[0]
+        error = check_one_gen(ia, oa, **perceptron_dct)
+        if error < 1:
+            break
