@@ -24,6 +24,9 @@ def load_json(folder_name, file_name):
 
 
 def save_json(folder_name, file_name, save_dct):
+    """
+    Сохранить json файл
+    """
     if not os.path.exists(folder_name):
         os.mkdir(folder_name)
     filename = os.path.join(folder_name, file_name)

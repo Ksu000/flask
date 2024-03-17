@@ -106,7 +106,7 @@ if __name__ == '__main__':
     # input_array, output_array = get_data('/content/sample_data/mnist_test.csv')
     fdj = load_json('data', 'filedata.json')
 
-    for epoch in range(5000):
+    for epoch in range(5):
         num = 0
         filedata_json = dict()
         for error_key, child in fdj.items():
