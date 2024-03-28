@@ -59,12 +59,6 @@ def calc(canvas):
             if arr != 0:
                 img_array_resized[i, j] = arr
 
-    # np.savetxt(
-    #     "data/img_array_resized.csv",
-    #     img_array_resized.astype(int),
-    #     delimiter=",",
-    #     fmt="%s",
-    # )
     user_signal = np.reshape(img_array_resized, (1, img_array_resized.size))
     ia = np.array(user_signal)
 

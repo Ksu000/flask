@@ -177,5 +177,6 @@ if __name__ == "__main__":
         ia = input_array[0]
         oa = output_array[0]
         error = check_one_gen(ia, oa, **perceptron_dct)
+        print(error)
         if error < 1:
             break
