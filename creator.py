@@ -1,10 +1,18 @@
-import os
-import sys
-import csv
+from PIL import Image
 import numpy as np
+import sys
+import os
+import csv
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
+
+
+def smooth(I):
+    J = I.copy()
+    J[1:-1] = J[1:-1] // 2 + J[:-2] // 4 + J[2:] // 4
+    J[:, 1:-1] = J[:, 1:-1] // 2 + J[:, :-2] // 4 + J[:, 2:] // 4
+    return J
 
 
 # Функция для сохранения массива чисел в csv файл
@@ -32,7 +40,7 @@ class DrawingWidget(QWidget):
         self.image = QImage(400, 400, QImage.Format_RGB32)
         self.image.fill(Qt.white)
         self.pen_color = Qt.black
-        self.pen_width = 10
+        self.pen_width = 30
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -67,16 +75,13 @@ class ButtonsWidget(QWidget):
         layout = QVBoxLayout()
 
         button_layout = QGridLayout()
-        buttons = [[7, 8, 9], [4, 5, 6], [1, 2, 3]]
         for i in range(3):
             for j in range(3):
                 number = 3 * i + j + 1
                 button = QPushButton(str(number))
                 button.setFixedSize(50, 50)
                 button_layout.addWidget(button, i, j)
-                button.clicked.connect(
-                    lambda _, num=number: self.save_image(num)
-                )  # Подключаем обработчик сохранения для каждой кнопки
+                button.clicked.connect(lambda _, num=number: self.save_image(num))
 
         # Добавляем кнопку "Load"
         load_button = QPushButton("Load")
@@ -100,45 +105,74 @@ class ButtonsWidget(QWidget):
         self.setLayout(layout)
 
     def save_image(self, number):
-        file_name = os.path.join("data", f"image_{number}.png")
-        self.drawing_widget.image.save(file_name)
-        print(f"Saved image for number {number}, {file_name=}")
+        import cv2  # pip install opencv-python
+
+        tmp = "tmp"
+        if not os.path.exists(tmp):
+            os.mkdir(tmp)
+
+        tmpfilename = os.path.join(tmp, f"image_{number}.png")
+        image = self.drawing_widget.image
+        image.save(tmpfilename)
+
+        resize = Image.open(tmpfilename)
+        new_size = (28, 28)
+        resize.thumbnail(new_size)
+        resizefilename = os.path.join(tmp, f"image_{number}_resize.png")
+        resize.save(resizefilename)
+        grey_img = cv2.imread(resizefilename, cv2.IMREAD_GRAYSCALE)
+
+        greyfilename = os.path.join(tmp, f"image_{number}_grey.png")
+        cv2.imwrite(greyfilename, grey_img)
+
+        denoise = smooth(grey_img)
+        denoisefilename = os.path.join(tmp, f"image_{number}_denoise.png")
+        cv2.imwrite(denoisefilename, denoise)
+
+        array1 = np.array([number], dtype=int)
+        array2 = np.reshape(denoise, (1, 784))
+        array3 = array1.reshape(1, array1.shape[0])
+        arr = np.hstack((array3, array2))
+
+        csvname = os.path.join("data", f"train.csv")
+        arr_str =  ";".join(map(str, arr[0]))
+        with open(csvname, "a") as f:
+            f.write(arr_str + "\n")
+
         self.on_reset_click()
 
-    # def save_image(self, number):
-    #     img = self.drawing_widget.image
-    #     if not img.isNull():
-    #         img = img.convertToFormat(QImage.Format_RGB32)
-    #         width = img.width()
-    #         height = img.height()
-    #         print(width)
-    #         print(height)
-            
-    #         ptr = img.constBits()
-    #         ptr.setsize(img.byteCount())
-            
-    #         arr = np.array(ptr).reshape(height, width, 1)
-            
-    #         # Now you can access the pixel values in the NumPy array 'arr'
-    #         print("Image array shape:", arr.shape)
-    #         print(arr)
-    #     else:
-    #         print("Error: QImage is null.")
-    #     return 
+    def save_image1(self, number):
+        tmpfilename = "data/image_gray_280.png"
+        image = self.drawing_widget.image
+        w280 = 280
+        h280 = 280
+        image = image.scaled(w280, h280, aspectRatioMode=Qt.KeepAspectRatio)
+        image.save(tmpfilename)
 
-    #     img_array = self.drawing_widget.image.get_image_array()
-    #     img_array_resized = np.zeros((28, 28))
-    #     for i in range(28):
-    #         for j in range(28):
-    #             arr = img_array[i * 16 : i * 16 + 16, j * 16 : j * 16 + 16]
-    #             arr_sum = np.sum(arr)
-    #             arr_value = 255 - int(arr_sum / 4294967040 * 255)
-    #             if arr_value != 0:
-    #                 img_array_resized[i, j] = arr_value
+        image1 = Image.open(tmpfilename)
+        pixels = image1.load()
 
-    #     user_signal = np.reshape(img_array_resized, (1, img_array_resized.size))
-    #     ia = np.array(user_signal)
-    #     print("Processed image array:", ia)
+        h = 28
+        w = 28
+        dx = h280 // h
+        dy = w280 // w
+        output_image = Image.new("RGB", (h, w))
+        new_pixels = output_image.load()
+
+        for i in range(h):
+            for j in range(w):
+                block = (i * dx, j * dy, (i + 1) * dx, (j + 1) * dy)
+                sm = 0
+                cnt = 0
+                for x in range(block[0], block[2]):
+                    for y in range(block[1], block[3]):
+                        r, g, b = pixels[x, y]
+                        sm += r + g + b
+                        cnt += 1
+                px = sm // cnt
+                new_pixels[i, j] = (px, px, px)
+
+        output_image.save("res.jpg")
 
     def on_reset_click(self):
         self.drawing_widget.image.fill(Qt.white)
