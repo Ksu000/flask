@@ -2,12 +2,26 @@ from PIL import Image
 import numpy as np
 import sys
 import os
-import csv
+import json
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
-import matplotlib.pyplot as plt
-import random
+import uuid
+
+
+def normalize_2d(matrix):
+    norm = np.linalg.norm(matrix)
+    matrix = matrix / norm
+    return matrix
+
+
+def sigmoid(x, der=False):
+    """
+    Сигмоида для опредления значения весов
+    """
+    if der:
+        return x * (1 - x)
+    return 1 / (1 + np.exp(-x))
 
 
 def smooth(I):
@@ -41,15 +55,15 @@ class ChartWidget(QWidget):
 
             # Добавляем номер прямоугольника ниже столбца
             painter.setPen(Qt.black)
-            painter.setFont(QFont('Arial', 10))
-            painter.drawText(bar_x, self.height() - 5, str(i+1))
-
-
+            painter.setFont(QFont("Arial", 10))
+            painter.drawText(bar_x, self.height() - 5, str(i + 1))
 
 
 class DrawingWidget(QWidget):
-    def __init__(self):
+    def __init__(self, chart_widget):
         super().__init__()
+        self.chart_widget = chart_widget
+
         self.setFixedSize(560, 560)
         self.last_point = QPoint()
         self.image = QImage(560, 560, QImage.Format_RGB32)
@@ -81,6 +95,67 @@ class DrawingWidget(QWidget):
             self.last_point = event.pos()
             self.update()
 
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.chart_widget.data = self.calc(self.get_denoise())
+            self.chart_widget.update()
+
+    def get_denoise(self):
+        import cv2  # pip install opencv-python
+
+        tmp = "tmp"
+        if not os.path.exists(tmp):
+            os.mkdir(tmp)
+
+        tmpfilename = os.path.join(tmp, f"{uuid.uuid4()}.png")
+        image = self.image
+        image.save(tmpfilename)
+
+        resize = Image.open(tmpfilename)
+        new_size = (28, 28)
+        resize.thumbnail(new_size)
+        resizefilename = os.path.join(tmp, f"{uuid.uuid4()}.png")
+        resize.save(resizefilename)
+        grey_img = cv2.imread(resizefilename, cv2.IMREAD_GRAYSCALE)
+
+        greyfilename = os.path.join(tmp, f"{uuid.uuid4()}.png")
+        cv2.imwrite(greyfilename, grey_img)
+
+        denoise = smooth(grey_img)
+        denoisefilename = os.path.join(tmp, f"{uuid.uuid4()}.png")
+        cv2.imwrite(denoisefilename, denoise)
+
+        denoise_array = np.reshape(denoise, (1, 784))
+        return denoise_array
+
+    def calc(self, ia):
+        filename = os.path.join("data", "genom.json")
+        with open(filename, encoding="utf-8") as f:
+            genom_dct = json.load(f)
+
+        genom = genom_dct[min(genom_dct)]
+
+        PIXELS_PER_IMAGE = 784
+        HIDDEN_SIZE = 40
+        NUM_LABELS = 10
+
+        layer1_out = PIXELS_PER_IMAGE * HIDDEN_SIZE
+        second = HIDDEN_SIZE * NUM_LABELS
+        layer2_out = layer1_out + second
+        bias1_out = layer2_out + HIDDEN_SIZE
+
+        layer1 = np.reshape(genom[:layer1_out], (PIXELS_PER_IMAGE, HIDDEN_SIZE))
+        layer2 = np.reshape(genom[layer1_out:layer2_out], (HIDDEN_SIZE, NUM_LABELS))
+        bias1 = np.reshape(genom[layer2_out:bias1_out], (HIDDEN_SIZE,))
+        bias2 = np.reshape(genom[bias1_out:], (NUM_LABELS,))
+
+        # На выходе первого скрытого слоя
+        l1 = sigmoid(np.dot(ia, layer1) + bias1)
+        # На выходе второго скрытого слоя
+        l2 = sigmoid(np.dot(l1, layer2) + bias2)
+        l3 = normalize_2d(l2)
+        return [z for z in l3[0]]
+
 
 class ButtonsWidget(QWidget):
     def __init__(self, drawing_widget):
@@ -105,43 +180,20 @@ class ButtonsWidget(QWidget):
         self.setLayout(layout)
 
     def save_image(self, number):
-        import cv2  # pip install opencv-python
-
-        tmp = "tmp"
-        if not os.path.exists(tmp):
-            os.mkdir(tmp)
-
-        tmpfilename = os.path.join(tmp, f"image_{number}.png")
-        image = self.drawing_widget.image
-        image.save(tmpfilename)
-
-        resize = Image.open(tmpfilename)
-        new_size = (28, 28)
-        resize.thumbnail(new_size)
-        resizefilename = os.path.join(tmp, f"image_{number}_resize.png")
-        resize.save(resizefilename)
-        grey_img = cv2.imread(resizefilename, cv2.IMREAD_GRAYSCALE)
-
-        greyfilename = os.path.join(tmp, f"image_{number}_grey.png")
-        cv2.imwrite(greyfilename, grey_img)
-
-        denoise = smooth(grey_img)
-        denoisefilename = os.path.join(tmp, f"image_{number}_denoise.png")
-        cv2.imwrite(denoisefilename, denoise)
-
+        denoise_array = self.drawing_widget.get_denoise()
         a = np.array([number], dtype=int)
-        arr = np.hstack((a.reshape(1, a.shape[0]), np.reshape(denoise, (1, 784))))
-
-        csvname = os.path.join("data", f"train.csv")
+        arr = np.hstack((a.reshape(1, a.shape[0]), denoise_array))
+        csvname = os.path.join("data", "train.csv")
         arr_str = ",".join(map(str, arr[0]))
         with open(csvname, "a") as f:
             f.write(arr_str + "\n")
-
         self.on_reset_click()
 
     def on_reset_click(self):
         self.drawing_widget.image.fill(Qt.white)
         self.drawing_widget.update()
+        self.drawing_widget.chart_widget.data = [0] * 10
+        self.drawing_widget.chart_widget.update()
 
 
 class MainWindow(QMainWindow):
@@ -151,9 +203,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("PixelCraft: Drawing & Data Conversion Utility")
         self.setFixedSize(560, 860)
 
-        self.drawing_widget = DrawingWidget()
-        self.buttons_widget = ButtonsWidget(self.drawing_widget)
         self.chart_widget = ChartWidget()
+        self.drawing_widget = DrawingWidget(self.chart_widget)
+        self.buttons_widget = ButtonsWidget(self.drawing_widget)
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.chart_widget)
