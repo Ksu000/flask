@@ -41,7 +41,7 @@ class ChartWidget(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        bar_width = 45
+        bar_width = 48
         max_value = max(self.data)
 
         for i, value in enumerate(self.data):
