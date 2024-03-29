@@ -15,23 +15,6 @@ def smooth(I):
     return J
 
 
-# Функция для сохранения массива чисел в csv файл
-def save_to_csv(data):
-    with open("data.csv", "a", newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow(data)
-
-
-# Функция для загрузки последней строки из csv файла
-def load_from_csv():
-    with open("data.csv", "r") as file:
-        reader = csv.reader(file)
-        data = None
-        for row in reader:
-            data = row
-        return data
-
-
 class DrawingWidget(QWidget):
     def __init__(self):
         super().__init__()
@@ -129,61 +112,22 @@ class ButtonsWidget(QWidget):
         denoisefilename = os.path.join(tmp, f"image_{number}_denoise.png")
         cv2.imwrite(denoisefilename, denoise)
 
-        array1 = np.array([number], dtype=int)
-        array2 = np.reshape(denoise, (1, 784))
-        array3 = array1.reshape(1, array1.shape[0])
-        arr = np.hstack((array3, array2))
+        a = np.array([number], dtype=int)
+        arr = np.hstack((a.reshape(1, a.shape[0]), np.reshape(denoise, (1, 784))))
 
         csvname = os.path.join("data", f"train.csv")
-        arr_str =  ";".join(map(str, arr[0]))
+        arr_str = ",".join(map(str, arr[0]))
         with open(csvname, "a") as f:
             f.write(arr_str + "\n")
 
         self.on_reset_click()
-
-    def save_image1(self, number):
-        tmpfilename = "data/image_gray_280.png"
-        image = self.drawing_widget.image
-        w280 = 280
-        h280 = 280
-        image = image.scaled(w280, h280, aspectRatioMode=Qt.KeepAspectRatio)
-        image.save(tmpfilename)
-
-        image1 = Image.open(tmpfilename)
-        pixels = image1.load()
-
-        h = 28
-        w = 28
-        dx = h280 // h
-        dy = w280 // w
-        output_image = Image.new("RGB", (h, w))
-        new_pixels = output_image.load()
-
-        for i in range(h):
-            for j in range(w):
-                block = (i * dx, j * dy, (i + 1) * dx, (j + 1) * dy)
-                sm = 0
-                cnt = 0
-                for x in range(block[0], block[2]):
-                    for y in range(block[1], block[3]):
-                        r, g, b = pixels[x, y]
-                        sm += r + g + b
-                        cnt += 1
-                px = sm // cnt
-                new_pixels[i, j] = (px, px, px)
-
-        output_image.save("res.jpg")
 
     def on_reset_click(self):
         self.drawing_widget.image.fill(Qt.white)
         self.drawing_widget.update()
 
     def load_data(self):
-        data = load_from_csv()
-        if data:
-            print("Loaded data:", data)
-        else:
-            print("No data found in the CSV file")
+        pass
 
 
 class MainWindow(QMainWindow):

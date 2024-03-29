@@ -120,7 +120,7 @@ if __name__ == "__main__":
 
     # input_array, output_array = get_data("/content/sample_data/mnist_train_small.csv")
     # ('/content/sample_data/mnist_test.csv')
-    input_array, output_array = get_data('data/mnist_train.csv')
+    input_array, output_array = get_data('data/train.csv')
 
     shear = sorted(
         [random.randint(0, len(output_array)), random.randint(0, len(output_array))]
@@ -130,7 +130,7 @@ if __name__ == "__main__":
 
     # genom_dct = load_json("/content/drive/MyDrive/Colab Notebooks", "genom.json")
     genom_dct = load_json("data", "genom.json")
-    if genom_dct:
+    if genom_dct and len(genom_dct) == 2:
         dad_key, mom_key, *_ = sorted(genom_dct)
         dad = genom_dct[dad_key]
         mom = genom_dct[mom_key]

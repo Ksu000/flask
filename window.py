@@ -10,7 +10,7 @@ pygame.init()
 # Установка размеров окна
 WIDTH, HEIGHT = 448, 448
 CELL_SIZE = 1
-LINE_WIDTH = 10
+LINE_WIDTH = 20
 
 # Цвета
 WHITE = (255, 255, 255)
