@@ -56,7 +56,7 @@ class ChartWidget(QWidget):
             # Добавляем номер прямоугольника ниже столбца
             painter.setPen(Qt.black)
             painter.setFont(QFont("Arial", 10))
-            painter.drawText(bar_x, self.height() - 5, str(i + 1))
+            painter.drawText(bar_x, self.height() - 5, str(i))
 
 
 class DrawingWidget(QWidget):
@@ -192,7 +192,7 @@ class ButtonsWidget(QWidget):
     def on_reset_click(self):
         self.drawing_widget.image.fill(Qt.white)
         self.drawing_widget.update()
-        self.drawing_widget.chart_widget.data = [0] * 10
+        self.drawing_widget.chart_widget.data = [z for z in range(10)]
         self.drawing_widget.chart_widget.update()
 
 
