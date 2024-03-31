@@ -1,8 +1,9 @@
 from PIL import Image
+import PIL.ImageOps
 import numpy as np
+import train_genom
 import sys
 import os
-import json
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -13,15 +14,6 @@ def normalize_2d(matrix):
     norm = np.linalg.norm(matrix)
     matrix = matrix / norm
     return matrix
-
-
-def sigmoid(x, der=False):
-    """
-    Сигмоида для опредления значения весов
-    """
-    if der:
-        return x * (1 - x)
-    return 1 / (1 + np.exp(-x))
 
 
 def smooth(I):
@@ -112,6 +104,7 @@ class DrawingWidget(QWidget):
         image.save(tmpfilename)
 
         resize = Image.open(tmpfilename)
+        resize = PIL.ImageOps.invert(resize)
         new_size = (28, 28)
         resize.thumbnail(new_size)
         resizefilename = os.path.join(tmp, f"{uuid.uuid4()}.png")
@@ -120,41 +113,24 @@ class DrawingWidget(QWidget):
 
         greyfilename = os.path.join(tmp, f"{uuid.uuid4()}.png")
         cv2.imwrite(greyfilename, grey_img)
+        return_array = np.reshape(grey_img, (1, 784))
 
-        denoise = smooth(grey_img)
-        denoisefilename = os.path.join(tmp, f"{uuid.uuid4()}.png")
-        cv2.imwrite(denoisefilename, denoise)
-
-        denoise_array = np.reshape(denoise, (1, 784))
-        return denoise_array
+        # denoise = smooth(grey_img)
+        # denoisefilename = os.path.join(tmp, f"{uuid.uuid4()}.png")
+        # cv2.imwrite(denoisefilename, denoise)
+        # return_array = np.reshape(denoise, (1, 784))
+        return return_array
 
     def calc(self, ia):
-        filename = os.path.join("data", "genom.json")
-        with open(filename, encoding="utf-8") as f:
-            genom_dct = json.load(f)
-
-        genom = genom_dct[min(genom_dct)]
-
-        PIXELS_PER_IMAGE = 784
-        HIDDEN_SIZE = 40
-        NUM_LABELS = 10
-
-        layer1_out = PIXELS_PER_IMAGE * HIDDEN_SIZE
-        second = HIDDEN_SIZE * NUM_LABELS
-        layer2_out = layer1_out + second
-        bias1_out = layer2_out + HIDDEN_SIZE
-
-        layer1 = np.reshape(genom[:layer1_out], (PIXELS_PER_IMAGE, HIDDEN_SIZE))
-        layer2 = np.reshape(genom[layer1_out:layer2_out], (HIDDEN_SIZE, NUM_LABELS))
-        bias1 = np.reshape(genom[layer2_out:bias1_out], (HIDDEN_SIZE,))
-        bias2 = np.reshape(genom[bias1_out:], (NUM_LABELS,))
-
-        # На выходе первого скрытого слоя
-        l1 = sigmoid(np.dot(ia, layer1) + bias1)
-        # На выходе второго скрытого слоя
-        l2 = sigmoid(np.dot(l1, layer2) + bias2)
-        l3 = normalize_2d(l2)
-        return [z for z in l3[0]]
+        genom_dct = train_genom.load_json("data", "genom.json")
+        if genom_dct:
+            genom = genom_dct[min(genom_dct)]
+        else:
+            genom = train_genom.create_random_genom()
+        perceptron_dct = train_genom.cut_genom(genom)
+        l2 = train_genom.check_one_gen(ia, **perceptron_dct)
+        for_show = normalize_2d(l2)
+        return [z for z in for_show[0]]
 
 
 class ButtonsWidget(QWidget):
