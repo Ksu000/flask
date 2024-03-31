@@ -50,7 +50,7 @@ def hexabin(x):
     return x / 255
 
 
-def recombination(dad, mom, combination=0.9, mutations=0.2, diff=5):
+def recombination(dad, mom, combination=0.9, mutations=0.2, diff=1):
     assert len(dad) == len(mom), "len(dad) != len(mom)"
     child1 = []
     child2 = []
