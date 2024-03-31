@@ -50,7 +50,7 @@ def hexabin(x):
     return x / 255
 
 
-def recombination(dad, mom, combination=0.9, mutations=0.2, diff=1):
+def recombination(dad, mom, combination=0.7, mutations=0.5, diff=5):
     assert len(dad) == len(mom), "len(dad) != len(mom)"
     child1 = []
     child2 = []
@@ -177,7 +177,7 @@ if __name__ == "__main__":
             save_json(data_folder, "genom.json", genom_dct)
             break
 
-        if genesis % 3 == 0:
+        if genesis % 5 == 0:
             print(genesis, genom_dct.keys())
 
         genesis += 1
