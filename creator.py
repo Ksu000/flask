@@ -1,5 +1,5 @@
-from PIL import Image
-import PIL.ImageOps
+import joblib
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import numpy as np
 import train_genom
 import sys
@@ -28,27 +28,30 @@ class ChartWidget(QWidget):
         super().__init__()
         self.setFixedSize(560, 200)
         self.data = [i + 1 for i in range(10)]  # Высота столбцов от 1 до 10
+        self.predict = "_"
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-
-        bar_width = 48
+        bar_width = 40
         max_value = max(self.data)
 
         for i, value in enumerate(self.data):
             bar_height = value / max_value * (self.height() - 20)  # Высота столбца
             bar_x = i * (bar_width + 3)  # Увеличиваем отступ между столбцами
             bar_y = self.height() - bar_height
-
             color = QColor.fromHsvF(i / len(self.data), 1.0, 0.8)  # Генерация цветов
             painter.setBrush(color)
             painter.drawRect(int(bar_x), int(bar_y), int(bar_width), int(bar_height))
-
             # Добавляем номер прямоугольника ниже столбца
             painter.setPen(Qt.black)
             painter.setFont(QFont("Arial", 10))
             painter.drawText(bar_x, self.height() - 5, str(i))
+
+        # Отрисовка случайной цифры в правой области
+        painter.setPen(Qt.black)
+        painter.setFont(QFont("Arial", 150))
+        painter.drawText(self.width() - 130, self.height() - 5, str(self.predict))
 
 
 class DrawingWidget(QWidget):
@@ -62,6 +65,9 @@ class DrawingWidget(QWidget):
         self.image.fill(Qt.white)
         self.pen_color = Qt.black
         self.pen_width = 30
+
+        # Загрузим сохраненную модель
+        self.loaded_model = joblib.load("svm_model.pkl")
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -89,6 +95,7 @@ class DrawingWidget(QWidget):
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
+            self.chart_widget.predict = self.get_predict(self.get_denoise())
             self.chart_widget.data = self.calc(self.get_denoise())
             self.chart_widget.update()
 
@@ -104,7 +111,7 @@ class DrawingWidget(QWidget):
         image.save(tmpfilename)
 
         resize = Image.open(tmpfilename)
-        resize = PIL.ImageOps.invert(resize)
+        resize = ImageOps.invert(resize)
         new_size = (28, 28)
         resize.thumbnail(new_size)
         resizefilename = os.path.join(tmp, f"{uuid.uuid4()}.png")
@@ -120,6 +127,10 @@ class DrawingWidget(QWidget):
         # cv2.imwrite(denoisefilename, denoise)
         # return_array = np.reshape(denoise, (1, 784))
         return return_array
+
+    def get_predict(self, ia):
+        predicted_class = self.loaded_model.predict(ia)
+        return int(predicted_class[0])
 
     def calc(self, ia):
         genom_dct = train_genom.load_json("data", "genom.json")

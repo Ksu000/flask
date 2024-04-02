@@ -18,8 +18,20 @@ y_shuffled = y[shuffle_index]
 X_train, X_test, y_train, y_test = train_test_split(X_shuffled, y_shuffled, test_size=0.2, random_state=42)
 
 # Создание модели SVM
-clf = svm.SVC(kernel='rbf')  # C=1000. gamma = 0.1
+clf = svm.SVC(kernel='poly')  # C=1000. gamma = 0.1
 clf.fit(X_train, y_train)
+
+# from sklearn.linear_model import LogisticRegression
+# clf = LogisticRegression(solver='saga')
+# clf.fit(X_train, y_train)
+
+# from sklearn.neighbors import KNeighborsClassifier
+# clf = KNeighborsClassifier(algorithm='brute')
+# clf.fit(X_train, y_train)
+
+# from sklearn.ensemble import RandomForestClassifier
+# clf = RandomForestClassifier(n_estimators=1000, max_depth=10)
+# clf.fit(X_train, y_train)
 
 # Оценка точности модели
 accuracy = clf.score(X_test, y_test)
@@ -34,7 +46,7 @@ print("Модель сохранена успешно!")
 loaded_model = joblib.load('svm_model.pkl')
 
 # Применим модель к выбранной строке
-predicted_class = loaded_model.predict(X_test[:8])
+predicted_class = loaded_model.predict(X_test[:10])
 
 print(f"{predicted_class} Предсказанная метка класса")
-print(f"{y_test[:8]} Истинная метка класса")
+print(f"{y_test[:10]} Истинная метка класса")
