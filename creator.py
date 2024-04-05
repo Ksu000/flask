@@ -48,7 +48,7 @@ class ChartWidget(QWidget):
             painter.setFont(QFont("Arial", 10))
             painter.drawText(bar_x, self.height() - 5, str(i))
 
-        # Отрисовка случайной цифры в правой области
+        # Отрисовка цифры в правой области
         painter.setPen(Qt.black)
         painter.setFont(QFont("Arial", 150))
         painter.drawText(self.width() - 130, self.height() - 5, str(self.predict))

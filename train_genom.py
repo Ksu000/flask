@@ -34,13 +34,29 @@ def save_json(folder_name, file_name, save_dct):
         json.dump(save_dct, f, ensure_ascii=False, indent=4, sort_keys=True)
 
 
-def sigmoid(x, der=False):
+def sigmoid(x):
     """
     Сигмоида для опредления значения весов
     """
-    if der:
-        return x * (1 - x)
     return 1 / (1 + np.exp(-x))
+
+
+def ReLU(x):
+    """
+    Rectified Linear Activation
+    """
+    return x * (x > 0)
+
+
+def LeakyReLU(x):
+    """
+    Leaky Rectified Linear Activation
+    """
+    return np.where(x > 0, x, x * 0.01)
+
+
+def activation(x):
+    return sigmoid(x)
 
 
 def hexabin(x):
@@ -50,7 +66,7 @@ def hexabin(x):
     return x / 255
 
 
-def recombination(dad, mom, combination=0.7, mutations=0.7, diff=10):
+def recombination(dad, mom, combination=0.6, mutations=0.7, diff=4):
     assert len(dad) == len(mom), "len(dad) != len(mom)"
     child1 = []
     child2 = []
@@ -73,9 +89,9 @@ def recombination(dad, mom, combination=0.7, mutations=0.7, diff=10):
 
 def check_one_gen(ia, layer1, layer2, bias1, bias2):
     # На выходе первого скрытого слоя
-    l1 = sigmoid(np.dot(ia, layer1) + bias1)
+    l1 = activation(np.dot(ia, layer1) + bias1)
     # На выходе второго скрытого слоя
-    l2 = sigmoid(np.dot(l1, layer2) + bias2)
+    l2 = activation(np.dot(l1, layer2) + bias2)
     return l2
 
 
@@ -92,7 +108,8 @@ def cut_genom(genom):
     bias1_out = layer2_out + HIDDEN_SIZE
 
     layer1 = np.reshape(genom[:layer1_out], (PIXELS_PER_IMAGE, HIDDEN_SIZE))
-    layer2 = np.reshape(genom[layer1_out:layer2_out], (HIDDEN_SIZE, NUM_LABELS))
+    layer2 = np.reshape(genom[layer1_out:layer2_out],
+                        (HIDDEN_SIZE, NUM_LABELS))
     bias1 = np.reshape(genom[layer2_out:bias1_out], (HIDDEN_SIZE,))
     bias2 = np.reshape(genom[bias1_out:], (NUM_LABELS,))
 
