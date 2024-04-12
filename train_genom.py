@@ -55,8 +55,16 @@ def LeakyReLU(x):
     return np.where(x > 0, x, x * 0.01)
 
 
+def ELU(x):
+    """
+    Exponential Linear Unit
+    """
+    alpha = 1.5
+    return np.where(x > 0, x, alpha * (np.exp(x) - 1))
+
+
 def activation(x):
-    return sigmoid(x)
+    return ReLU(x)
 
 
 def hexabin(x):
@@ -66,7 +74,7 @@ def hexabin(x):
     return x / 255
 
 
-def recombination(dad, mom, combination=0.6, mutations=0.7, diff=4):
+def recombination(dad, mom, combination=0.6, mutations=0.7, diff=1):
     assert len(dad) == len(mom), "len(dad) != len(mom)"
     child1 = []
     child2 = []
@@ -75,7 +83,7 @@ def recombination(dad, mom, combination=0.6, mutations=0.7, diff=4):
         if combination < random.random():
             copies = not copies
         if mutations > random.random():
-            delta = diff * (random.random() - 0.5)
+            delta = random.randint(-1 * diff, 1 * diff)
             child1.append(mom[n] + delta)
             child2.append(dad[n] - delta)
         elif copies:
@@ -97,7 +105,11 @@ def check_one_gen(ia, layer1, layer2, bias1, bias2):
 
 def calc_error_check_one_gen(oa, l2):
     # Насколько мы ошиблись?
-    error = np.sum(np.square(oa - l2))
+    # Если ячейка с максимальным значением в слое вывода совпадает
+    # с ячейкой с максимальным значением в одномерной матрице
+    # l - labels - то счётчик правильных ответов увеличивается
+    error = int(np.argmax(oa) != np.argmax(l2))
+    # error = np.sum(np.square(oa - l2))
     return error
 
 
@@ -108,8 +120,7 @@ def cut_genom(genom):
     bias1_out = layer2_out + HIDDEN_SIZE
 
     layer1 = np.reshape(genom[:layer1_out], (PIXELS_PER_IMAGE, HIDDEN_SIZE))
-    layer2 = np.reshape(genom[layer1_out:layer2_out],
-                        (HIDDEN_SIZE, NUM_LABELS))
+    layer2 = np.reshape(genom[layer1_out:layer2_out], (HIDDEN_SIZE, NUM_LABELS))
     bias1 = np.reshape(genom[layer2_out:bias1_out], (HIDDEN_SIZE,))
     bias2 = np.reshape(genom[bias1_out:], (NUM_LABELS,))
 
@@ -142,7 +153,8 @@ def get_data(filename):
 def create_random_genom():
     dad = list()
     for _ in range((PIXELS_PER_IMAGE * HIDDEN_SIZE) + (HIDDEN_SIZE * NUM_LABELS)):
-        dad.append(random.random() - 0.5)
+        diff = 1
+        dad.append(random.randint(-1 * diff, 1 * diff))
     dad.extend([0 for _ in range(HIDDEN_SIZE)])
     dad.extend([0 for _ in range(NUM_LABELS)])
     return dad
@@ -195,7 +207,7 @@ if __name__ == "__main__":
             save_json(data_folder, "genom.json", genom_dct)
             break
 
-        if genesis % 10 == 0:
+        if genesis % 25 == 0:
             print(genesis, genom_dct.keys())
 
         genesis += 1
