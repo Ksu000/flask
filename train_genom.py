@@ -55,6 +55,14 @@ def LeakyReLU(x):
     return np.where(x > 0, x, x * 0.01)
 
 
+def ELU(x):
+    """
+    Exponential Linear Unit
+    """
+    alpha = 0.9
+    return np.where(x > 0, x, alpha * (np.exp(x) - 1))
+
+
 def activation(x):
     return sigmoid(x)
 
@@ -97,7 +105,11 @@ def check_one_gen(ia, layer1, layer2, bias1, bias2):
 
 def calc_error_check_one_gen(oa, l2):
     # Насколько мы ошиблись?
-    error = np.sum(np.square(oa - l2))
+    # Если ячейка с максимальным значением в слое вывода совпадает
+    # с ячейкой с максимальным значением в одномерной матрице
+    # l - labels - то счётчик правильных ответов увеличивается
+    error = int(np.argmax(oa) != np.argmax(l2))
+    # error = np.sum(np.square(oa - l2))
     return error
 
 
