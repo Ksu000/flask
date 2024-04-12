@@ -59,11 +59,7 @@ def ELU(x):
     """
     Exponential Linear Unit
     """
-<<<<<<< HEAD
     alpha = 0.9
-=======
-    alpha = 1.5
->>>>>>> main
     return np.where(x > 0, x, alpha * (np.exp(x) - 1))
 
 
