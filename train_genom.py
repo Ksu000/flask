@@ -159,10 +159,21 @@ def create_random_genom():
     dad.extend([0 for _ in range(NUM_LABELS)])
     return dad
 
+def writelog(folder_name, file_name, activation, step, data):
+    if not os.path.exists(folder_name):
+        os.mkdir(folder_name)
+    filename = os.path.join(folder_name, file_name)    
+    with open(filename, 'a') as f:
+        datalist = [str(z) for z in data]
+        datalist.append(str(step))
+        datalist.append(str(activation))
+        data_str = ';'.join(datalist)
+        f.write(f'{data_str}\n')
+
 
 if __name__ == "__main__":
     data_folder = "data"
-    csvname = os.path.join(data_folder, "train.csv")
+    csvname = os.path.join(data_folder, "digit_draw.csv")
     input_array, output_array = get_data(csvname)
     genom_dct = load_json(data_folder, "genom.json")
 
@@ -209,5 +220,7 @@ if __name__ == "__main__":
 
         if genesis % 25 == 0:
             print(genesis, genom_dct.keys())
+            activations = 'ELU'
+            writelog('log', f'{activations}.csv', activations, genesis, genom_dct.keys())
 
         genesis += 1

@@ -2,11 +2,12 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Загрузка данных из файла train.csv без заголовков
-data = pd.read_csv('data/train.csv', header=None)
+# Загрузка данных из файла digit_draw.csv без заголовков
+data = pd.read_csv('data/digit_draw.csv', header=None)
 
-# Фильтрация строк, где значение первой колонки равно 0
-filtered_data = data[data[0] == 7]
+# Фильтрация строк, где значение первой колонки равно f
+f = 2
+filtered_data = data[data[0] == f]
 
 # Создание пустой матрицы для объединенного изображения
 combined_image = np.zeros((28, 28))
@@ -21,5 +22,5 @@ for i, row in enumerate(filtered_data.iterrows()):
 plt.imshow(combined_image, cmap='gray')
 plt.axis('off')
 # Сохранение изображения в файл
-plt.savefig('combined_image.png')
+plt.savefig(f'{f}_combined_image.png')
 plt.show()
