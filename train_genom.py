@@ -64,7 +64,7 @@ def ELU(x):
 
 
 def activation(x):
-    return ReLU(x)
+    return sigmoid(x)
 
 
 def hexabin(x):
@@ -213,14 +213,14 @@ if __name__ == "__main__":
             save_json(data_folder, "genom.json", genom_dct)
             break
 
-        if genesis > 1000:
+        if genesis > 10000:
             print(genesis, genom_dct.keys())
             save_json(data_folder, "genom.json", genom_dct)
             break
 
         if genesis % 25 == 0:
             print(genesis, genom_dct.keys())
-            activations = 'ELU'
+            activations = 'sigmoid'
             writelog('log', f'{activations}.csv', activations, genesis, genom_dct.keys())
 
         genesis += 1
